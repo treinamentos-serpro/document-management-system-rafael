@@ -1,4 +1,5 @@
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
@@ -16,7 +17,7 @@ function sanitizeBaseName(originalName) {
     .replace(/^\.+/, '')
     .replace(/^$/, 'arquivo');
 
-  return `${baseName}-${Date.now()}${extension || ''}`;
+  return `${baseName}-${crypto.randomUUID()}${extension || ''}`;
 }
 
 const storage = multer.diskStorage({
