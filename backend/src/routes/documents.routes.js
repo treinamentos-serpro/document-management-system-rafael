@@ -1,29 +1,54 @@
-// Definição dos endpoints de documentos. Delega para o controller.
-
-const express = require('express');
-const multer = require('multer');
-const crypto = require('node:crypto');
 const path = require('node:path');
-const documentsController = require('../controllers/documents.controller');
-const { STORAGE_DIR } = require('../config/storage');
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const multer = require('multer');
 
-// Grava os arquivos no filesystem local com nome único, preservando a extensão.
+const { STORAGE_ROOT } = require('../config/storage');
+const documentsController = require('../controllers/documents.controller');
+
+function sanitizeBaseName(originalName) {
+  const rawName = String(originalName || 'arquivo').replace(/\\/g, '/').split('/').pop() || 'arquivo';
+  const extension = path.extname(rawName);
+  const baseName = path
+    .basename(rawName, extension)
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9._-]/g, '')
+    .replace(/^\.+/, '')
+    .replace(/^$/, 'arquivo');
+
+  return `${baseName}-${Date.now()}${extension || ''}`;
+}
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, STORAGE_DIR);
+  destination(_req, _file, callback) {
+    callback(null, STORAGE_ROOT);
   },
-  filename: (req, file, cb) => {
-    const uniqueName = `${crypto.randomUUID()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+  filename(_req, file, callback) {
+    callback(null, sanitizeBaseName(file.originalname));
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+});
+
+const uploadRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Muitas requisições. Tente novamente em alguns segundos.',
+  },
+});
 
 const router = express.Router();
 
-router.post('/upload', upload.single('file'), documentsController.upload);
-router.get('/documents', documentsController.list);
-router.get('/documents/:id/download', documentsController.download);
+router.post('/upload', uploadRateLimiter, upload.single('file'), documentsController.uploadDocument);
+router.get('/documents', documentsController.listDocuments);
+router.get('/documents/:id/download', documentsController.downloadDocument);
 
 module.exports = router;

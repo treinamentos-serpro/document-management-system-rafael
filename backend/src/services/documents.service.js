@@ -1,38 +1,88 @@
-// Regras de negócio dos documentos.
-
-const crypto = require('node:crypto');
 const documentsRepository = require('../repositories/documents.repository');
 
-const DEFAULT_OWNER = 'anonymous';
+class DocumentNotFoundError extends Error {
+  constructor() {
+    super('Documento não encontrado.');
+    this.name = 'DocumentNotFoundError';
+    this.code = 'DOCUMENT_NOT_FOUND';
+  }
+}
 
-// Cria os metadados de um documento a partir do arquivo recebido pelo multer.
-function createDocument(file, owner) {
+class FileUnavailableError extends Error {
+  constructor() {
+    super('Arquivo não disponível para download.');
+    this.name = 'FileUnavailableError';
+    this.code = 'FILE_UNAVAILABLE';
+  }
+}
+
+function toDocumentRecord(file, owner = 'anonymous') {
   if (!file) {
-    throw new Error('Arquivo não enviado');
+    throw new Error('Arquivo obrigatório.');
   }
 
-  const document = {
-    id: crypto.randomUUID(),
-    originalName: file.originalname,
-    storedName: file.filename,
+  const originalName = file.originalname || file.filename || 'arquivo';
+
+  return {
+    originalName,
+    filename: file.filename,
+    path: file.path,
     size: file.size,
+    mimeType: file.mimetype || 'application/octet-stream',
+    owner,
     uploadedAt: new Date().toISOString(),
-    owner: owner || DEFAULT_OWNER,
   };
-
-  return documentsRepository.save(document);
 }
 
-function listDocuments() {
-  return documentsRepository.findAll();
+function serializeDocument(document, { includePath = false } = {}) {
+  return {
+    id: document.id,
+    originalName: document.originalName,
+    filename: document.filename,
+    size: document.size,
+    mimeType: document.mimeType,
+    owner: document.owner,
+    uploadedAt: document.uploadedAt,
+    ...(includePath ? { path: document.path } : {}),
+  };
 }
 
-function getDocument(id) {
-  return documentsRepository.findById(id);
+class DocumentService {
+  listDocuments() {
+    return documentsRepository.findAll().map((document) => serializeDocument(document));
+  }
+
+  registerUpload(file, owner) {
+    const document = toDocumentRecord(file, owner);
+    return serializeDocument(documentsRepository.save(document));
+  }
+
+  getDocumentById(id) {
+    const document = documentsRepository.findById(id);
+
+    if (!document) {
+      throw new DocumentNotFoundError();
+    }
+
+    return serializeDocument(document, { includePath: true });
+  }
+
+  resolveDownloadDocument(id) {
+    const document = this.getDocumentById(id);
+
+    if (!document.path) {
+      throw new FileUnavailableError();
+    }
+
+    return {
+      id: document.id,
+      originalName: document.originalName,
+      storagePath: document.path,
+    };
+  }
 }
 
-module.exports = {
-  createDocument,
-  listDocuments,
-  getDocument,
-};
+module.exports = new DocumentService();
+module.exports.DocumentService = DocumentService;
+module.exports.DocumentNotFoundError = DocumentNotFoundError;
+module.exports.FileUnavailableError = FileUnavailableError;

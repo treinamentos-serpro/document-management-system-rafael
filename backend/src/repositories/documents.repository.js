@@ -1,24 +1,33 @@
-// Persistência dos metadados dos documentos.
-// Nesta fase os metadados ficam em memória; os arquivos binários são gravados
-// no filesystem local (ver configuração do multer nas rotas).
+const { randomUUID } = require('node:crypto');
 
 const documents = [];
 
-function save(document) {
-  documents.push(document);
-  return document;
-}
-
 function findAll() {
-  return documents;
+  return [...documents];
 }
 
 function findById(id) {
-  return documents.find((document) => document.id === id);
+  return documents.find((document) => document.id === id) || null;
+}
+
+function save(document) {
+  const record = {
+    ...document,
+    id: document.id || randomUUID(),
+    uploadedAt: document.uploadedAt || new Date().toISOString(),
+  };
+
+  documents.push(record);
+  return record;
+}
+
+function reset() {
+  documents.length = 0;
 }
 
 module.exports = {
-  save,
   findAll,
   findById,
+  save,
+  reset,
 };

@@ -1,43 +1,55 @@
-// Entrada/saída HTTP e validação básica dos documentos.
-
-const path = require('node:path');
-const fs = require('node:fs');
 const documentsService = require('../services/documents.service');
-const { STORAGE_DIR } = require('../config/storage');
 
-function upload(req, res) {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+async function uploadDocument(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Arquivo obrigatório.' });
+    }
+
+    const document = documentsService.registerUpload(req.file, req.body?.owner || 'anonymous');
+
+    return res.status(201).json({
+      id: document.id,
+      originalName: document.originalName,
+      filename: document.filename,
+      size: document.size,
+      mimeType: document.mimeType,
+      owner: document.owner,
+      uploadedAt: document.uploadedAt,
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Não foi possível processar o upload.' });
   }
-
-  const owner = req.body && req.body.owner;
-  const document = documentsService.createDocument(req.file, owner);
-  return res.status(201).json(document);
 }
 
-function list(req, res) {
-  const documents = documentsService.listDocuments();
-  return res.status(200).json(documents);
+async function listDocuments(req, res) {
+  try {
+    const documents = documentsService.listDocuments();
+    return res.json(documents);
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Não foi possível listar os documentos.' });
+  }
 }
 
-function download(req, res) {
-  const document = documentsService.getDocument(req.params.id);
+async function downloadDocument(req, res) {
+  try {
+    const document = documentsService.resolveDownloadDocument(req.params.id);
+    return res.download(document.storagePath, document.originalName);
+  } catch (error) {
+    if (error.code === 'FILE_UNAVAILABLE') {
+      return res.status(503).json({ error: error.message });
+    }
 
-  if (!document) {
-    return res.status(404).json({ error: 'Documento não encontrado' });
+    if (error.code === 'DOCUMENT_NOT_FOUND') {
+      return res.status(404).json({ error: error.message });
+    }
+
+    return res.status(500).json({ error: error.message || 'Não foi possível processar o download.' });
   }
-
-  const filePath = path.join(STORAGE_DIR, document.storedName);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'Arquivo não encontrado no storage' });
-  }
-
-  return res.download(filePath, document.originalName);
 }
 
 module.exports = {
-  upload,
-  list,
-  download,
+  uploadDocument,
+  listDocuments,
+  downloadDocument,
 };
