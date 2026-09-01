@@ -1,16 +1,22 @@
-// Formulário de upload de documentos.
+// Formulário de upload usando os componentes do GovBR-DS (wrapper React).
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { BrUpload, BrInput, BrButton, BrMessage } from '@govbr-ds/webcomponents-react';
 import { uploadDocument } from '../services/documentsApi';
 
 export default function UploadComponent({ onUploaded }) {
   const [file, setFile] = useState(null);
-  const [owner, setOwner] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const ownerRef = useRef(null);
+  const uploadRef = useRef(null);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  function handleSelectedFiles(event) {
+    const files = event.detail;
+    setFile(files && files.length ? files[0] : null);
+  }
+
+  async function handleSubmit() {
     setError('');
 
     if (!file) {
@@ -20,10 +26,12 @@ export default function UploadComponent({ onUploaded }) {
 
     setSending(true);
     try {
+      const owner = ownerRef.current ? ownerRef.current.value : '';
       await uploadDocument(file, owner);
       setFile(null);
-      setOwner('');
-      event.target.reset();
+      if (ownerRef.current) {
+        ownerRef.current.value = '';
+      }
       if (onUploaded) {
         onUploaded();
       }
@@ -35,31 +43,27 @@ export default function UploadComponent({ onUploaded }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <div className="d-flex flex-column" style={{ gap: '1rem' }}>
+      <BrUpload
+        ref={uploadRef}
+        label="Documento"
+        onSelectedFilesChange={handleSelectedFiles}
+      />
+      <BrInput
+        ref={ownerRef}
+        label="Dono (opcional)"
+        placeholder="Identificador do usuário"
+      />
       <div>
-        <label>
-          Arquivo:{' '}
-          <input
-            type="file"
-            onChange={(event) => setFile(event.target.files[0] || null)}
-          />
-        </label>
+        <BrButton emphasis="primary" onClick={handleSubmit} disabled={sending}>
+          {sending ? 'Enviando...' : 'Enviar documento'}
+        </BrButton>
       </div>
-      <div>
-        <label>
-          Dono:{' '}
-          <input
-            type="text"
-            value={owner}
-            placeholder="opcional"
-            onChange={(event) => setOwner(event.target.value)}
-          />
-        </label>
-      </div>
-      <button type="submit" disabled={sending}>
-        {sending ? 'Enviando...' : 'Enviar documento'}
-      </button>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-    </form>
+      {error && (
+        <BrMessage state="danger" showIcon>
+          {error}
+        </BrMessage>
+      )}
+    </div>
   );
 }

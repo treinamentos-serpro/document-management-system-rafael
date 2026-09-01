@@ -1,6 +1,7 @@
 // Componente raiz do Document Management System.
 
 import { useCallback, useEffect, useState } from 'react';
+import { BrHeader, BrCard, BrMessage } from '@govbr-ds/webcomponents-react';
 import UploadComponent from './components/UploadComponent';
 import DocumentList from './components/DocumentList';
 import { listDocuments } from './services/documentsApi';
@@ -24,19 +25,31 @@ export default function App() {
   }, [loadDocuments]);
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Document Management System</h1>
+    <>
+      <BrHeader
+        title="Document Management System"
+        subTitle="Gestão de documentos"
+        density="small"
+      />
 
-      <section>
-        <h2>Enviar documento</h2>
-        <UploadComponent onUploaded={loadDocuments} />
-      </section>
+      <main className="container-lg" style={{ paddingBlock: '2rem' }}>
+        <div className="d-flex flex-column" style={{ gap: '2rem' }}>
+          <BrCard>
+            <h2 className="mb-3">Enviar documento</h2>
+            <UploadComponent onUploaded={loadDocuments} />
+          </BrCard>
 
-      <section>
-        <h2>Documentos</h2>
-        {error && <p style={{ color: 'crimson' }}>{error}</p>}
-        <DocumentList documents={documents} />
-      </section>
-    </main>
+          <BrCard>
+            <h2 className="mb-3">Documentos</h2>
+            {error && (
+              <BrMessage state="danger" showIcon>
+                {error}
+              </BrMessage>
+            )}
+            <DocumentList documents={documents} />
+          </BrCard>
+        </div>
+      </main>
+    </>
   );
 }
