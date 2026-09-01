@@ -30,6 +30,7 @@ app.get('/health', (req, res) => {
 ['/api', '/'].forEach((prefix) => app.use(prefix, documentsRoutes));
 
 app.use((err, _req, res, _next) => {
+  console.error(err);
   res.status(500).json({ error: 'Erro interno ao processar a requisição' });
 });
 
