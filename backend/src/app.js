@@ -10,18 +10,24 @@
 // Restrição do projeto: uploads são gravados no filesystem local da aplicação
 // usando multer com diskStorage. Não utilize provedores externos.
 
+const fs = require('node:fs');
 const express = require('express');
+
+const { STORAGE_ROOT } = require('./config/storage');
+const documentsRoutes = require('./routes/documents.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+fs.mkdirSync(STORAGE_ROOT, { recursive: true });
+
 app.use(express.json());
 
-// Endpoint de verificação de saúde. As demais rotas (/upload, /documents,
-// /documents/:id/download) serão implementadas durante o Passo 2.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+['/api', '/'].forEach((prefix) => app.use(prefix, documentsRoutes));
 
 if (require.main === module) {
   app.listen(PORT, () => {
