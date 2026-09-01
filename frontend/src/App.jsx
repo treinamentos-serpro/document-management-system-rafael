@@ -1,20 +1,55 @@
-// Seed do componente raiz do Document Management System.
-//
-// Este é apenas um ponto de partida mínimo. Durante o Passo 3 você vai usar o
-// Agent Mode do GitHub Copilot para construir os componentes:
-//   - components/UploadComponent
-//   - components/DocumentList
-//   - components/DownloadButton
-// e o serviço services/ que consome a API do backend via fetch.
+// Componente raiz do Document Management System.
+
+import { useCallback, useEffect, useState } from 'react';
+import { BrHeader, BrCard, BrMessage } from '@govbr-ds/webcomponents-react';
+import UploadComponent from './components/UploadComponent';
+import DocumentList from './components/DocumentList';
+import { listDocuments } from './services/documentsApi';
 
 export default function App() {
+  const [documents, setDocuments] = useState([]);
+  const [error, setError] = useState('');
+
+  const loadDocuments = useCallback(async () => {
+    setError('');
+    try {
+      const data = await listDocuments();
+      setDocuments(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
+
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>Document Management System</h1>
-      <p>
-        Seed do frontend. Construa a interface durante o Passo 3 usando o Agent
-        Mode do GitHub Copilot.
-      </p>
-    </main>
+    <>
+      <BrHeader
+        title="Document Management System"
+        subTitle="Gestão de documentos"
+        density="small"
+      />
+
+      <main className="container-lg" style={{ paddingBlock: '2rem' }}>
+        <div className="d-flex flex-column" style={{ gap: '2rem' }}>
+          <BrCard>
+            <h2 className="mb-3">Enviar documento</h2>
+            <UploadComponent onUploaded={loadDocuments} />
+          </BrCard>
+
+          <BrCard>
+            <h2 className="mb-3">Documentos</h2>
+            {error && (
+              <BrMessage state="danger" showIcon>
+                {error}
+              </BrMessage>
+            )}
+            <DocumentList documents={documents} />
+          </BrCard>
+        </div>
+      </main>
+    </>
   );
 }

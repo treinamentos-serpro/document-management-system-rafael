@@ -13,6 +13,9 @@
     "node": ">=24"
   },
   "dependencies": {
+    "@govbr-ds/core": "^3.7.0",
+    "@govbr-ds/webcomponents": "^2.1.3",
+    "@govbr-ds/webcomponents-react": "^2.1.3",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },

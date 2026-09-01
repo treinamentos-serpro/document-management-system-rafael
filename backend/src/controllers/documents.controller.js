@@ -34,7 +34,11 @@ async function listDocuments(req, res) {
 async function downloadDocument(req, res) {
   try {
     const document = documentsService.resolveDownloadDocument(req.params.id);
-    return res.download(document.storagePath, document.originalName);
+    return res.download(document.storagePath, document.originalName, (error) => {
+      if (error && !res.headersSent) {
+        res.status(503).json({ error: 'Arquivo não disponível para download.' });
+      }
+    });
   } catch (error) {
     if (error.code === 'FILE_UNAVAILABLE') {
       return res.status(503).json({ error: error.message });

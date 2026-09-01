@@ -1,4 +1,5 @@
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
@@ -16,7 +17,7 @@ function sanitizeBaseName(originalName) {
     .replace(/^\.+/, '')
     .replace(/^$/, 'arquivo');
 
-  return `${baseName}-${Date.now()}${extension || ''}`;
+  return `${baseName}-${crypto.randomUUID()}${extension || ''}`;
 }
 
 const storage = multer.diskStorage({
@@ -49,6 +50,6 @@ const router = express.Router();
 
 router.post('/upload', uploadRateLimiter, upload.single('file'), documentsController.uploadDocument);
 router.get('/documents', documentsController.listDocuments);
-router.get('/documents/:id/download', documentsController.downloadDocument);
+router.get('/documents/:id/download', uploadRateLimiter, documentsController.downloadDocument);
 
 module.exports = router;
