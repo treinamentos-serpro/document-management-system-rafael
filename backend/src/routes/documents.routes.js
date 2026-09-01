@@ -50,6 +50,6 @@ const router = express.Router();
 
 router.post('/upload', uploadRateLimiter, upload.single('file'), documentsController.uploadDocument);
 router.get('/documents', documentsController.listDocuments);
-router.get('/documents/:id/download', documentsController.downloadDocument);
+router.get('/documents/:id/download', uploadRateLimiter, documentsController.downloadDocument);
 
 module.exports = router;
