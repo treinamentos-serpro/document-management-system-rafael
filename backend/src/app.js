@@ -29,6 +29,10 @@ app.get('/health', (req, res) => {
 
 ['/api', '/'].forEach((prefix) => app.use(prefix, documentsRoutes));
 
+app.use((err, _req, res, _next) => {
+  res.status(500).json({ error: 'Erro interno ao processar a requisição' });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`DMS backend ouvindo na porta ${PORT}`);
